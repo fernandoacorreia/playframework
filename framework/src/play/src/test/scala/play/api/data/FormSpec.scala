@@ -5,6 +5,7 @@ package play.api.data
 
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
+import play.api.data.validation.ValidationError
 import play.api.data.format.Formats._
 import org.specs2.mutable.Specification
 import org.joda.time.{DateTime, LocalDate}
@@ -96,6 +97,18 @@ object FormSpec extends Specification {
       )
       failingValidatorForm.fill("foo").errors must beEmpty
     }
+
+    "apply constraints with ValidationError" in {
+      val f1 = ScalaForms.validationErrorForm.fillAndValidate("aUser", "valid")
+      f1.errors.size must equalTo(0)
+
+      val f2 = ScalaForms.validationErrorForm.fillAndValidate("aUser", "invalid")
+      f2.errors.size must equalTo(1)
+      val error = f2.errors(0)
+      error.messages(0) must equalTo("message.with.parameters")
+      error.args(0) must equalTo(1)
+      error.args(1) must equalTo(2)
+    }
   }
 
   "render form using field[Type] syntax" in {
@@ -121,7 +134,6 @@ object FormSpec extends Specification {
     ScalaForms.repeatedForm.bindFromRequest( Map("name" -> Seq("Kiki"), "emails[]" -> Seq("kiki@gmail.com")) ).get must equalTo(("Kiki", Seq("kiki@gmail.com")))
     ScalaForms.repeatedForm.bindFromRequest( Map("name" -> Seq("Kiki"), "emails[]" -> Seq("kiki@gmail.com", "kiki@zen.com")) ).get must equalTo(("Kiki", Seq("kiki@gmail.com", "kiki@zen.com")))
   }
-
 
   "render a form with max 18 fields" in {
     ScalaForms.helloForm.bind(Map("name" -> "foo", "repeat" -> "1")).get.toString must equalTo("(foo,1,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None)")
@@ -222,4 +234,13 @@ object ScalaForms {
   )
 
   val longNumberForm = Form("longNumber" -> longNumber(10, 42))
+
+  val validationErrorForm = Form(
+    tuple(
+      "username" -> of[String].verifying(nonEmpty),
+      "password" -> of[String].verifying2(
+        ValidationError("message.with.parameters", 1, 2),
+        _ == "valid" )
+    )
+  )
 }

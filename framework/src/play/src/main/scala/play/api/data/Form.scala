@@ -533,6 +533,28 @@ trait Mapping[T] {
   }
 
   /**
+   * Constructs a new Mapping based on this one, by adding a new ad-hoc constraint.
+   *
+   * For example:
+   * {{{
+   *   import play.api.data._
+   *   import validation.Constraints._
+   *   import play.api.data.validation.ValidationError
+   *
+   *   Form("field" -> text.verifying(ValidationError("message", parameter), f => isValid(f)))
+   * }}}
+   *
+   * @param error The validation error used if the constraint fails
+   * @param constraint a function describing the constraint that returns `false` on failure
+   * @return the new mapping
+   */
+  def verifying2(error: ValidationError, constraint: (T => Boolean)): Mapping[T] = {
+    verifying(Constraint { t: T =>
+      if (constraint(t)) Valid else Invalid(Seq(error))
+    })
+  }
+
+  /**
    * Transform this Mapping[T] to a Mapping[B].
    *
    * @tparam B The type of the new mapping.
